@@ -1,0 +1,35 @@
+
+{
+  "name": "amidakuji",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/bundle.js",
+  "scripts": {
+    "test": "jest",
+    "start": "webpack serve --open",
+    "build": "webpack"
+  },
+  "keywords": [
+    "p5.js",
+    "sketch",
+    "typescript"
+  ],
+  "author": "gmcmillan",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "@types/lodash": "^4.17.0",
+    "@types/p5": "^1.7.6",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.4.3",
+    "webpack": "^5.91.0",
+    "webpack-cli": "^5.1.4",
+    "webpack-dev-server": "^5.0.4"
+  },
+  "dependencies": {
+    "lodash": "^4.17.21",
+    "p5": "^1.9.2"
+  }
+}
