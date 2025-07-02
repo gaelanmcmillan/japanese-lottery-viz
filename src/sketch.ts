@@ -238,6 +238,7 @@ class AmidaKuji {
       const laneX = tlx + i * laneW;
       const laneLabel = `${i + 1}`;
       const laneEndLabel = `${endLanes[i] + 1}`;
+      const labelFill = endLanes[i] === i ? [220, 255, 220] : [255, 220, 220];
       {
         p5.push();
         p5.strokeWeight(3);
@@ -245,12 +246,15 @@ class AmidaKuji {
         p5.textAlign("center", "center");
         p5.textSize(textSize);
 
-        // top label
-        p5.circle(laneX, topLabelY, labelRadius);
-        p5.text(laneLabel, laneX, topLabelY);
+        {
+          p5.push();
+          p5.fill(labelFill);
+          p5.circle(laneX, topLabelY, labelRadius);
+          p5.circle(laneX, botLabelY, labelRadius);
+          p5.pop();
+        }
 
-        // bot label
-        p5.circle(laneX, botLabelY, labelRadius);
+        p5.text(laneLabel, laneX, topLabelY);
         p5.text(laneEndLabel, laneX, botLabelY);
 
         // lane
@@ -497,7 +501,7 @@ function keyPressed(p5: P5) {
 }
 
 function draw(p5: P5) {
-  p5.background(220);
+  p5.background(255);
 
   const padX = 40;
   const padY = 20;
