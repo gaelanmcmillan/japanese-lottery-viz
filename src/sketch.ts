@@ -10,8 +10,42 @@ const TEST_CASE_1 = `4 6 7
 6 3 4
 `;
 
-const CANVAS_WIDTH = 800;
+const CANVAS_WIDTH = 400;
 const CANVAS_HEIGHT = 400;
+
+function intToPastelRGB(n: number): [number, number, number] {
+  const goldenRatioConjugate = 0.61803398875;
+  const h = (n * goldenRatioConjugate) % 1;
+
+  // Low saturation and high value → pastel
+  const s = 0.4 + (0.1 * ((n * 13) % 5)) / 4; // s ∈ [0.4, 0.5]
+  const v = 0.9;
+
+  return hsvToRgb(h, s, v);
+}
+
+function hsvToRgb(h: number, s: number, v: number): [number, number, number] {
+  const i = Math.floor(h * 6);
+  const f = h * 6 - i;
+  const p = v * (1 - s);
+  const q = v * (1 - f * s);
+  const t = v * (1 - (1 - f) * s);
+  let r: number = 0,
+    g: number = 0,
+    b: number = 0;
+
+  // prettier-ignore
+  switch (i % 6) {
+    case 0: r = v; g = t; b = p; break;
+    case 1: r = q; g = v; b = p; break;
+    case 2: r = p; g = v; b = t; break;
+    case 3: r = p; g = q; b = v; break;
+    case 4: r = t; g = p; b = v; break;
+    case 5: r = v; g = p; b = q; break;
+  }
+
+  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+}
 
 type Bridge = {
   id: number;
@@ -27,7 +61,7 @@ class AmidaKuji {
   bridgeIndex: number;
   currentBridges: Array<Bridge>;
   isBridgeActive: Map<number, boolean>;
-  solvingFor: number | undefined;
+  paths: Array<Array<{ r: number; c: number }>>;
 
   constructor(laneCount: number, height: number, bridges: Array<Bridge> = []) {
     this.laneCount = laneCount;
@@ -37,6 +71,8 @@ class AmidaKuji {
     this.bridgeIndex = 0;
     this.isBridgeActive = new Map();
     this.bridges.forEach((b) => this.isBridgeActive.set(b.id, true));
+    this.paths = [];
+    this.updateSolution();
   }
 
   init(laneCount: number, height: number, bridges: Array<Bridge>) {
@@ -47,6 +83,8 @@ class AmidaKuji {
     this.bridgeIndex = 0;
     this.isBridgeActive = new Map();
     this.bridges.forEach((b) => this.isBridgeActive.set(b.id, true));
+    this.paths = [];
+    this.updateSolution();
   }
 
   updateBridges() {
@@ -67,6 +105,8 @@ class AmidaKuji {
         this.currentBridges.push(bridge);
       }
     }
+
+    this.updateSolution();
   }
 
   incBridgeIndex() {
@@ -80,6 +120,12 @@ class AmidaKuji {
     if (this.bridgeIndex - 1 >= 0) {
       this.bridgeIndex--;
       this.updateBridges();
+    }
+  }
+
+  updateSolution() {
+    for (let lane = 0; lane < this.laneCount; ++lane) {
+      this.paths[lane] = this.solve(lane);
     }
   }
 
@@ -137,65 +183,53 @@ class AmidaKuji {
     const bridgeUnitH = bridgeAreaH / this.height;
     const topLabelY = tly + labelRadius;
     const botLabelY = tly + laneH + 3 * labelRadius;
+    const endLanes = [];
 
-    for (let i = 0; i < this.laneCount; ++i) {
-      const laneX = tlx + i * laneW;
-      // check to see if we're hovering a handle
-      {
-        const dx = p5.mouseX - laneX;
-        const dy = p5.mouseY - topLabelY;
-        if (dx * dx + dy * dy <= labelRadius * labelRadius) {
-          this.solvingFor = i;
+    {
+      for (let lane = 0; lane < this.laneCount; ++lane) {
+        const points = this.paths[lane];
+        const laneX = tlx + lane * laneW;
+        const color = intToPastelRGB(lane);
+        const weight = 9 + 6 * (this.laneCount - lane - 1);
+        for (let i = 0; i < points.length - 1; ++i) {
+          const isStart = i === 0;
+          const isEnd = i === points.length - 2;
+
+          const p = points[i];
+          const q = points[i + 1];
+          const pOffset = isStart ? topLabelY : bridgeAreaY;
+          const py = pOffset + (this.height - p.r) * bridgeUnitH;
+          const px = tlx + (p.c - 1) * laneW;
+          const qy = isEnd
+            ? botLabelY
+            : bridgeAreaY + (this.height - q.r) * bridgeUnitH;
+
+          const qx = tlx + (q.c - 1) * laneW;
+          {
+            p5.push();
+            p5.strokeWeight(weight);
+            p5.stroke(color);
+            p5.fill(color);
+            p5.line(px, py, qx, qy);
+            if (isEnd) {
+              p5.ellipseMode("radius");
+              p5.circle(qx, botLabelY, labelRadius);
+            }
+            p5.pop();
+          }
+          if (isEnd) {
+            endLanes[points[i + 1].c - 1] = lane;
+          }
         }
-      }
-
-      // check to see if we're hovering a handle
-      {
-        const dx = p5.mouseX - laneX;
-        const dy = p5.mouseY - botLabelY;
-        if (dx * dx + dy * dy <= labelRadius * labelRadius) {
-          this.solvingFor = i;
-        }
-      }
-    }
-
-    if (this.solvingFor !== undefined) {
-      const points = this.solve(this.solvingFor);
-      const laneX = tlx + this.solvingFor * laneW;
-      for (let i = 0; i < points.length - 1; ++i) {
-        const isStart = i === 0;
-        const isEnd = i === points.length - 2;
-
-        const p = points[i];
-        const q = points[i + 1];
-        const pOffset = isStart ? topLabelY : bridgeAreaY;
-        const py = pOffset + (this.height - p.r) * bridgeUnitH;
-        const px = tlx + (p.c - 1) * laneW;
-        const qy = isEnd
-          ? botLabelY
-          : bridgeAreaY + (this.height - q.r) * bridgeUnitH;
-        const qx = tlx + (q.c - 1) * laneW;
         {
           p5.push();
-          p5.strokeWeight(9);
-          p5.stroke(200, 100, 100);
-          p5.fill(200, 100, 100);
-          p5.line(px, py, qx, qy);
-          if (isEnd) {
-            p5.ellipseMode("radius");
-            p5.circle(qx, botLabelY, labelRadius);
-          }
+          p5.strokeWeight(weight);
+          p5.stroke(color);
+          p5.fill(color);
+          p5.ellipseMode("radius");
+          p5.circle(laneX, topLabelY, labelRadius);
           p5.pop();
         }
-      }
-      {
-        p5.push();
-        p5.strokeWeight(9);
-        p5.stroke(200, 100, 100);
-        p5.fill(200, 100, 100);
-        p5.ellipseMode("radius");
-        p5.circle(laneX, topLabelY, labelRadius);
-        p5.pop();
       }
     }
 
@@ -203,6 +237,7 @@ class AmidaKuji {
     for (let i = 0; i < this.laneCount; ++i) {
       const laneX = tlx + i * laneW;
       const laneLabel = `${i + 1}`;
+      const laneEndLabel = `${endLanes[i] + 1}`;
       {
         p5.push();
         p5.strokeWeight(3);
@@ -216,7 +251,7 @@ class AmidaKuji {
 
         // bot label
         p5.circle(laneX, botLabelY, labelRadius);
-        p5.text(laneLabel, laneX, botLabelY);
+        p5.text(laneEndLabel, laneX, botLabelY);
 
         // lane
         p5.line(laneX, laneY, laneX, laneY + laneH);
@@ -232,12 +267,21 @@ class AmidaKuji {
     for (const bridge of this.currentBridges) {
       const bridgeY = bridgeAreaY + (this.height - bridge.height) * bridgeUnitH;
       const bridgeLeftX = tlx + (bridge.left - 1) * laneW;
-      const heightLabel = `${bridge.height}`;
+      const heightLabel = `y=${bridge.height}`;
       const bridgeRightX = tlx + (bridge.right - 1) * laneW;
       const bridgeColor = this.isBridgeActive.get(bridge.id) ? 0 : 180;
 
       {
         p5.push();
+        {
+          p5.push();
+          p5.stroke(0);
+          p5.fill(255);
+          const width = p5.textWidth(heightLabel);
+          p5.rect(bridgeLeftX + 4, bridgeY + 4, width + 2, 14);
+          p5.pop();
+        }
+
         p5.textAlign("left", "top");
         p5.text(heightLabel, bridgeLeftX + 5, bridgeY + 5);
         p5.strokeWeight(3);
@@ -263,6 +307,7 @@ class AmidaKuji {
               bridge.id,
               !this.isBridgeActive.get(bridge.id)
             );
+            this.updateSolution();
           }
 
           p5.push();
