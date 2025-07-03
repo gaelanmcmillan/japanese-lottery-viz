@@ -47,7 +47,7 @@ function hsvToRgb(h: number, s: number, v: number): [number, number, number] {
   return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
 }
 
-type Bridge = {
+type Bar = {
   id: number;
   height: number;
   left: number;
@@ -57,69 +57,69 @@ type Bridge = {
 class AmidaKuji {
   laneCount: number;
   height: number;
-  bridges: Array<Bridge>;
-  bridgeIndex: number;
-  currentBridges: Array<Bridge>;
-  isBridgeActive: Map<number, boolean>;
+  bars: Array<Bar>;
+  queryIndex: number;
+  currentBars: Array<Bar>;
+  isBarActive: Map<number, boolean>;
   paths: Array<Array<{ r: number; c: number }>>;
 
-  constructor(laneCount: number, height: number, bridges: Array<Bridge> = []) {
+  constructor(laneCount: number, height: number, bars: Array<Bar> = []) {
     this.laneCount = laneCount;
     this.height = height;
-    this.bridges = bridges;
-    this.currentBridges = [];
-    this.bridgeIndex = 0;
-    this.isBridgeActive = new Map();
-    this.bridges.forEach((b) => this.isBridgeActive.set(b.id, true));
+    this.bars = bars;
+    this.currentBars = [];
+    this.queryIndex = 0;
+    this.isBarActive = new Map();
+    this.bars.forEach((b) => this.isBarActive.set(b.id, true));
     this.paths = [];
     this.updateSolution();
   }
 
-  init(laneCount: number, height: number, bridges: Array<Bridge>) {
+  init(laneCount: number, height: number, bars: Array<Bar>) {
     this.laneCount = laneCount;
     this.height = height;
-    this.bridges = bridges;
-    this.currentBridges = [];
-    this.bridgeIndex = 0;
-    this.isBridgeActive = new Map();
-    this.bridges.forEach((b) => this.isBridgeActive.set(b.id, true));
+    this.bars = bars;
+    this.currentBars = [];
+    this.queryIndex = 0;
+    this.isBarActive = new Map();
+    this.bars.forEach((b) => this.isBarActive.set(b.id, true));
     this.paths = [];
     this.updateSolution();
   }
 
-  updateBridges() {
-    this.currentBridges = [];
-    for (let i = 0; i < this.bridgeIndex; ++i) {
-      const bridge = this.bridges[i];
+  updateBars() {
+    this.currentBars = [];
+    for (let i = 0; i < this.queryIndex; ++i) {
+      const bar = this.bars[i];
 
-      const idx = this.currentBridges.findIndex(
+      const idx = this.currentBars.findIndex(
         (b) =>
-          b.height === bridge.height &&
-          b.left === bridge.left &&
-          b.right === bridge.right
+          b.height === bar.height &&
+          b.left === bar.left &&
+          b.right === bar.right
       );
 
       if (idx !== -1) {
-        this.currentBridges.splice(idx, 1);
+        this.currentBars.splice(idx, 1);
       } else {
-        this.currentBridges.push(bridge);
+        this.currentBars.push(bar);
       }
     }
 
     this.updateSolution();
   }
 
-  incBridgeIndex() {
-    if (this.bridgeIndex + 1 <= this.bridges.length) {
-      this.bridgeIndex++;
-      this.updateBridges();
+  incQueryIndex() {
+    if (this.queryIndex + 1 <= this.bars.length) {
+      this.queryIndex++;
+      this.updateBars();
     }
   }
 
-  decBridgeIndex() {
-    if (this.bridgeIndex - 1 >= 0) {
-      this.bridgeIndex--;
-      this.updateBridges();
+  decQueryIndex() {
+    if (this.queryIndex - 1 >= 0) {
+      this.queryIndex--;
+      this.updateBars();
     }
   }
 
@@ -130,7 +130,7 @@ class AmidaKuji {
   }
 
   solve(lane: number): Array<{ r: number; c: number }> {
-    this.currentBridges.sort((a, b) => {
+    this.currentBars.sort((a, b) => {
       if (a.height === b.height) {
         return a.left - b.left;
       }
@@ -141,19 +141,19 @@ class AmidaKuji {
     let r = this.height;
     const points = [{ r, c }];
 
-    for (let i = 0; i < this.currentBridges.length; ++i) {
-      const cb = this.currentBridges[i];
-      if (!this.isBridgeActive.get(cb.id)) continue;
+    for (let i = 0; i < this.currentBars.length; ++i) {
+      const cb = this.currentBars[i];
+      if (!this.isBarActive.get(cb.id)) continue;
 
       if (r >= cb.height) {
         if (c === cb.left) {
           points.push({ r: cb.height, c: cb.left });
           points.push({ r: cb.height, c: cb.right });
-          c = this.currentBridges[i].right;
-        } else if (c === this.currentBridges[i].right) {
+          c = this.currentBars[i].right;
+        } else if (c === this.currentBars[i].right) {
           points.push({ r: cb.height, c: cb.right });
           points.push({ r: cb.height, c: cb.left });
-          c = this.currentBridges[i].left;
+          c = this.currentBars[i].left;
         }
       }
     }
@@ -177,10 +177,10 @@ class AmidaKuji {
     const laneW = w / (this.laneCount - 1);
     const laneH = h - 4 * labelRadius;
     const laneY = tly + 2 * labelRadius;
-    const bridgePadAmt = h / 25;
-    const bridgeAreaY = laneY + bridgePadAmt;
-    const bridgeAreaH = laneH - 2 * bridgePadAmt;
-    const bridgeUnitH = bridgeAreaH / this.height;
+    const barPadAmt = h / 25;
+    const barAreaY = laneY + barPadAmt;
+    const barAreaH = laneH - 2 * barPadAmt;
+    const barUnitH = barAreaH / this.height;
     const topLabelY = tly + labelRadius;
     const botLabelY = tly + laneH + 3 * labelRadius;
     const endLanes = [];
@@ -197,12 +197,12 @@ class AmidaKuji {
 
           const p = points[i];
           const q = points[i + 1];
-          const pOffset = isStart ? topLabelY : bridgeAreaY;
-          const py = pOffset + (this.height - p.r) * bridgeUnitH;
+          const pOffset = isStart ? topLabelY : barAreaY;
+          const py = pOffset + (this.height - p.r) * barUnitH;
           const px = tlx + (p.c - 1) * laneW;
           const qy = isEnd
             ? botLabelY
-            : bridgeAreaY + (this.height - q.r) * bridgeUnitH;
+            : barAreaY + (this.height - q.r) * barUnitH;
 
           const qx = tlx + (q.c - 1) * laneW;
           {
@@ -267,13 +267,14 @@ class AmidaKuji {
     // p5.line(tlx, tly, tlx + w, tly + h);
     let anyHover = false;
 
-    // draw bridges
-    for (const bridge of this.currentBridges) {
-      const bridgeY = bridgeAreaY + (this.height - bridge.height) * bridgeUnitH;
-      const bridgeLeftX = tlx + (bridge.left - 1) * laneW;
-      const heightLabel = `y=${bridge.height}`;
-      const bridgeRightX = tlx + (bridge.right - 1) * laneW;
-      const bridgeColor = this.isBridgeActive.get(bridge.id) ? 0 : 180;
+    // draw bars
+    for (const bar of this.currentBars) {
+      const barY = barAreaY + (this.height - bar.height) * barUnitH;
+      const barLeftX = tlx + (bar.left - 1) * laneW;
+      const barRightX = tlx + (bar.right - 1) * laneW;
+      const barColor = this.isBarActive.get(bar.id) ? 0 : 180;
+
+      const heightLabel = `y=${bar.height}`;
 
       {
         p5.push();
@@ -282,42 +283,39 @@ class AmidaKuji {
           p5.stroke(0);
           p5.fill(255);
           const width = p5.textWidth(heightLabel);
-          p5.rect(bridgeLeftX + 4, bridgeY + 4, width + 2, 14);
+          p5.rect(barLeftX + 4, barY + 4, width + 2, 14);
           p5.pop();
         }
 
         p5.textAlign("left", "top");
-        p5.text(heightLabel, bridgeLeftX + 5, bridgeY + 5);
+        p5.text(heightLabel, barLeftX + 5, barY + 5);
         p5.strokeWeight(3);
-        p5.stroke(bridgeColor);
-        p5.line(bridgeLeftX, bridgeY, bridgeRightX, bridgeY);
+        p5.stroke(barColor);
+        p5.line(barLeftX, barY, barRightX, barY);
         p5.pop();
       }
 
-      // check if we're hovering the bridge
+      // check if we're hovering the bar
       {
         const cy = 5;
         const mx = p5.mouseX;
         const my = p5.mouseY;
         if (
-          bridgeLeftX < mx &&
-          mx < bridgeRightX &&
-          bridgeY - cy < my &&
-          my < bridgeY + cy
+          barLeftX < mx &&
+          mx < barRightX &&
+          barY - cy < my &&
+          my < barY + cy
         ) {
           anyHover = true;
           if (justClicked) {
-            this.isBridgeActive.set(
-              bridge.id,
-              !this.isBridgeActive.get(bridge.id)
-            );
+            this.isBarActive.set(bar.id, !this.isBarActive.get(bar.id));
             this.updateSolution();
           }
 
           p5.push();
           p5.strokeWeight(5);
-          p5.stroke(bridgeColor);
-          p5.line(bridgeLeftX, bridgeY, bridgeRightX, bridgeY);
+          p5.stroke(barColor);
+          p5.line(barLeftX, barY, barRightX, barY);
           p5.pop();
         } else {
         }
@@ -386,7 +384,7 @@ function tryParseNumber(s: string): number {
 function parseJapaneseLotteryInput(s: string): {
   laneCount: number;
   height: number;
-  bridges: Array<Bridge>;
+  queries: Array<Bar>;
 } {
   if (s === "") throw new Error("expected a non-empty string");
 
@@ -396,7 +394,7 @@ function parseJapaneseLotteryInput(s: string): {
     throw new Error("expected three values on the first line");
   const laneCount: number = tryParseNumber(firstLine[0]);
   const height: number = tryParseNumber(firstLine[1]);
-  const bridges: Array<Bridge> = [];
+  const bars: Array<Bar> = [];
 
   for (let i = 1; i < lines.length; ++i) {
     const line = lines[i];
@@ -412,16 +410,16 @@ function parseJapaneseLotteryInput(s: string): {
     const x1 = tryParseNumber(strings[2]);
     const left = Math.min(x0, x1);
     const right = Math.max(x0, x1);
-    bridges.push({ id: i, height, left, right });
+    bars.push({ id: i, height, left, right });
   }
 
-  return { laneCount, height, bridges };
+  return { laneCount, height, queries: bars };
 }
 
 let amidaKuji: AmidaKuji;
 let inputCtrl: Control;
-let decBridgeIndexButton: P5.Element;
-let incBridgeIndexButton: P5.Element;
+let decQueryIndexButton: P5.Element;
+let incQueryIndexButton: P5.Element;
 
 let mouseWasPressed: boolean;
 
@@ -430,7 +428,7 @@ function setup(p5: P5) {
 
   p5.createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
   const tc1 = parseJapaneseLotteryInput(TEST_CASE_1);
-  amidaKuji = new AmidaKuji(tc1.laneCount, tc1.height, tc1.bridges);
+  amidaKuji = new AmidaKuji(tc1.laneCount, tc1.height, tc1.queries);
 
   const inputCtr = p5.createDiv();
   {
@@ -442,33 +440,31 @@ function setup(p5: P5) {
 
   inputCtrl = createControl(p5, "puzzle input", TEST_CASE_1, true);
 
-  decBridgeIndexButton = p5.createButton("<");
-  decBridgeIndexButton.elt.style.height = "20px";
+  decQueryIndexButton = p5.createButton("<");
+  decQueryIndexButton.elt.style.height = "20px";
 
-  const bridgeIndexSpan = p5.createSpan(
-    `bridge index: ${amidaKuji.bridgeIndex}`
-  );
+  const barIndexSpan = p5.createSpan(`query index: ${amidaKuji.queryIndex}`);
 
-  incBridgeIndexButton = p5.createButton(">");
-  incBridgeIndexButton.elt.style.height = "20px";
+  incQueryIndexButton = p5.createButton(">");
+  incQueryIndexButton.elt.style.height = "20px";
 
-  decBridgeIndexButton.mouseClicked(() => {
-    amidaKuji.decBridgeIndex();
-    bridgeIndexSpan.html(`bridge index: ${amidaKuji.bridgeIndex}`);
+  decQueryIndexButton.mouseClicked(() => {
+    amidaKuji.decQueryIndex();
+    barIndexSpan.html(`query index: ${amidaKuji.queryIndex}`);
   });
 
-  incBridgeIndexButton.mouseClicked(() => {
-    amidaKuji.incBridgeIndex();
-    bridgeIndexSpan.html(`bridge index: ${amidaKuji.bridgeIndex}`);
+  incQueryIndexButton.mouseClicked(() => {
+    amidaKuji.incQueryIndex();
+    barIndexSpan.html(`query index: ${amidaKuji.queryIndex}`);
   });
 
   inputCtrl.button.mouseClicked(() => {
     try {
-      const { laneCount, height, bridges } = parseJapaneseLotteryInput(
+      const { laneCount, height, queries } = parseJapaneseLotteryInput(
         inputCtrl.input.value() as string
       );
-      amidaKuji.init(laneCount, height, bridges);
-      bridgeIndexSpan.html(`bridge index: ${amidaKuji.bridgeIndex}`);
+      amidaKuji.init(laneCount, height, queries);
+      barIndexSpan.html(`query index: ${amidaKuji.queryIndex}`);
     } catch (e) {
       console.error(e);
     }
@@ -480,18 +476,17 @@ function setup(p5: P5) {
     <details>
       <summary>instructions</summary>
       <ul>
-        <li>paste a test case in the input box</li>
-        <li>use arrow buttons [<] [>] to step through test case</li>
-        <li>hover a label to show its path</li>
-        <li>click a bridge to toggle it</li>
+        <li>paste a test case from <a href="https://open.kattis.com/problems/japaneselottery">the problem</a> in the input box</li>
+        <li>use buttons [<] [>] (or arrow keys) to step through test case</li>
+        <li>click a bar to toggle it on and off</li>
       </ul>
     </details>
     `);
 
   inputCtr.child(inputCtrl.container);
-  inputCtr.child(decBridgeIndexButton);
-  inputCtr.child(bridgeIndexSpan);
-  inputCtr.child(incBridgeIndexButton);
+  inputCtr.child(decQueryIndexButton);
+  inputCtr.child(barIndexSpan);
+  inputCtr.child(incQueryIndexButton);
   inputCtr.child(instructions);
 }
 
