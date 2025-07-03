@@ -423,6 +423,9 @@ let incQueryIndexButton: P5.Element;
 
 let mouseWasPressed: boolean;
 
+let rightArrowCallback = () => {};
+let leftArrowCallback = () => {};
+
 function setup(p5: P5) {
   mouseWasPressed = p5.mouseIsPressed;
 
@@ -448,15 +451,16 @@ function setup(p5: P5) {
   incQueryIndexButton = p5.createButton(">");
   incQueryIndexButton.elt.style.height = "20px";
 
-  decQueryIndexButton.mouseClicked(() => {
-    amidaKuji.decQueryIndex();
-    barIndexSpan.html(`query index: ${amidaKuji.queryIndex}`);
-  });
-
-  incQueryIndexButton.mouseClicked(() => {
+  rightArrowCallback = () => {
     amidaKuji.incQueryIndex();
     barIndexSpan.html(`query index: ${amidaKuji.queryIndex}`);
-  });
+  };
+  leftArrowCallback = () => {
+    amidaKuji.decQueryIndex();
+    barIndexSpan.html(`query index: ${amidaKuji.queryIndex}`);
+  };
+  decQueryIndexButton.mouseClicked(leftArrowCallback);
+  incQueryIndexButton.mouseClicked(rightArrowCallback);
 
   inputCtrl.button.mouseClicked(() => {
     try {
@@ -491,7 +495,11 @@ function setup(p5: P5) {
 }
 
 function keyPressed(p5: P5) {
-  if (p5.key === " ") {
+  console.log(p5.key);
+  if (p5.key === "ArrowRight") {
+    rightArrowCallback();
+  } else if (p5.key === "ArrowLeft") {
+    leftArrowCallback();
   }
 }
 
